@@ -109,20 +109,19 @@ void gaussianFilter(cv::Mat &input, cv::Mat &output, cv::Mat &mask) {
             }
             
             // set value
+            // notice we can't change value of pad, we need keep it to do next filter iteration
+            // we save new value to output image
             if (ch == 1) {
-                pad.at<uchar>(i, j) = static_cast<uchar>(sum[0]);
+                output.at<uchar>(i-r, j-r) = static_cast<uchar>(sum[0]);
             } else if (ch == 3) {
                 cv::Vec3b bgr = {static_cast<uchar>(sum[0]), 
                                  static_cast<uchar>(sum[1]), 
                                  static_cast<uchar>(sum[2])};
                                  
-                pad.at<cv::Vec3b>(i, j) = bgr;
+                output.at<cv::Vec3b>(i-r, j-r) = bgr;
             }
         }
     }
-    
-    // recover original size from padded image
-    output = pad(cv::Range(r, r+input.rows), cv::Range(r, r+input.cols)).clone();
 }
 
 
@@ -142,6 +141,7 @@ void splitGaussianFilter(cv::Mat &input, cv::Mat &output, cv::Mat &mask) {
     
     
     // do x-direction convolution
+    cv::Mat imgX = pad.clone();
     for (int i = r; i < row; ++i) {
         for (int j = r; j < col; ++j) {
             
@@ -163,14 +163,16 @@ void splitGaussianFilter(cv::Mat &input, cv::Mat &output, cv::Mat &mask) {
             }
             
             // set value
+            // notice we can't change value of pad, we need keep it to do next filter iteration
+            // we save new value to imgX
             if (ch == 1) {
-                pad.at<uchar>(i, j) = static_cast<uchar>(sum[0]);
+                imgX.at<uchar>(i, j) = static_cast<uchar>(sum[0]);
             } else if (ch == 3) {
                 cv::Vec3b bgr = {static_cast<uchar>(sum[0]), 
                                  static_cast<uchar>(sum[1]), 
                                  static_cast<uchar>(sum[2])};
                                  
-                pad.at<cv::Vec3b>(i, j) = bgr;
+                imgX.at<cv::Vec3b>(i, j) = bgr;
             }
         }
     }
@@ -187,9 +189,9 @@ void splitGaussianFilter(cv::Mat &input, cv::Mat &output, cv::Mat &mask) {
                 // make sure input is 1 channel or 3 channels
                 // notice mask datatype is float(we define in computeMask)
                 if (ch == 1) {
-                    sum[0] += mask.at<float>(r+m, 0) * pad.at<uchar>(i+m, j); 
+                    sum[0] += mask.at<float>(r+m, 0) * imgX.at<uchar>(i+m, j); 
                 } else if (ch == 3) {
-                    cv::Vec3b bgr = pad.at<cv::Vec3b>(i+m, j);
+                    cv::Vec3b bgr = imgX.at<cv::Vec3b>(i+m, j);
                     float p = mask.at<float>(r+m, 0);
                     sum[0] += bgr[0] * p;
                     sum[1] += bgr[1] * p;
@@ -207,20 +209,19 @@ void splitGaussianFilter(cv::Mat &input, cv::Mat &output, cv::Mat &mask) {
             }
             
             // set value
+            // notice we can't change value of imgX, we need keep it to do next filter iteration
+            // we save new value to output image
             if (ch == 1) {
-                pad.at<uchar>(i, j) = static_cast<uchar>(sum[0]);
+                output.at<uchar>(i-r, j-r) = static_cast<uchar>(sum[0]);
             } else if (ch == 3) {
                 cv::Vec3b bgr = {static_cast<uchar>(sum[0]), 
                                  static_cast<uchar>(sum[1]), 
                                  static_cast<uchar>(sum[2])};
                                  
-                pad.at<cv::Vec3b>(i, j) = bgr;
+                output.at<cv::Vec3b>(i-r, j-r) = bgr;
             }
         }
     }
-    
-    // recover original size from padded image
-    output = pad(cv::Range(r, r+input.rows), cv::Range(r, r+input.cols)).clone();
     
 }
 
@@ -239,7 +240,7 @@ int main(int argc, char** argv) {
     const int kernelSize = 3;
     
     // try gaussianFilter
-    cv::Mat output1;
+    cv::Mat output1 = input.clone();
     cv::Mat mask2d = computeMask(sigma, kernelSize, 2);
     std::cout << "2d mask:\n" << mask2d << std::endl;
     gaussianFilter(input, output1, mask2d);
@@ -248,7 +249,7 @@ int main(int argc, char** argv) {
     cv::waitKey(0);
     
     // try opencv function
-    cv::Mat output2;
+    cv::Mat output2 = input.clone();;
     cv::GaussianBlur(input, output2, cv::Size(kernelSize,kernelSize), sigma, 0, cv::BORDER_REFLECT);
     
     cv::Mat diff1;
@@ -257,7 +258,7 @@ int main(int argc, char** argv) {
     cv::waitKey(0);
     
     // try split-gaussianFilter
-    cv::Mat output3;
+    cv::Mat output3 = input.clone();;
     cv::Mat mask1d = computeMask(sigma, kernelSize, 1);
     std::cout << "1d mask:\n" << mask1d << std::endl;
     splitGaussianFilter(input, output3, mask1d);
