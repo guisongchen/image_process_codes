@@ -5,6 +5,7 @@
 #include <vector>
 
 // we can compute 2d gaussian or 1d gaussian
+// TODO if sigmaX = sigmaY = 0, sigma = 0.3*((ksize-1)*0.5 - 1) + 0.8
 cv::Mat computeMask(float sigma, int r, int dim) {
     
     // compute kernel matrix(mask)
