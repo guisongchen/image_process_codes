@@ -38,10 +38,14 @@ void laplaceFilter(cv::Mat &input, cv::Mat &output) {
     const int row = pad.rows - r;
     const int col = pad.cols - r;
     
+    cv::Mat temp = cv::Mat::zeros(input.rows, input.cols, CV_16S);
+    
+    short minVal = 256, maxVal = 0;
+    
     for (int i = r; i < row; ++i) {
         for (int j = r; j < col; ++j) {
             
-            int val = 0;
+            short val = 0;
             
             for (int a = -r; a <= r; ++a) {
                 for (int b = -r; b <= r; ++b) {
@@ -51,13 +55,22 @@ void laplaceFilter(cv::Mat &input, cv::Mat &output) {
                 }
             }
             
-            // check value and set output
-            if (val < 0)
-                val = 0;
-            if (val > 255)
-                val = 255;
+            if (val < minVal)
+                minVal = val;
+            else if (val > maxVal)
+                maxVal = val;
             
-            output.at<uchar>(i-r, j-r) = static_cast<uchar>(val);
+            temp.at<short>(i-r, j-r) = static_cast<short>(val);
+        }
+    }
+
+    // since temp pixel value may < 0 or > 255, we normalized to [0, 255]
+    
+    short gap = maxVal - minVal;
+    
+    for (int i = 0; i < row - r; ++i) {
+        for (int j = 0; j < col - r; ++j) {
+            output.at<uchar>(i, j) = static_cast<uchar>(255*(temp.at<short>(i,j) - minVal) / gap);
         }
     }
 }
@@ -97,7 +110,7 @@ int main(int argc, char** argv) {
     cv::imshow("add1", add1);
     cv::waitKey(0);
     
-    // opencv function
+    // opencv function(notice: output of Laplacian was not normalized)
     cv::Mat output2, add2;
     cv::Laplacian(gray, output2, CV_16S, 3);
     cv::convertScaleAbs(output2, output2);
